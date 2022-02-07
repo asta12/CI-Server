@@ -2,7 +2,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Enumeration;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
@@ -24,16 +28,18 @@ public class ContinuousIntegrationServer extends AbstractHandler
         response.setStatus(HttpServletResponse.SC_OK);
         baseRequest.setHandled(true);
 
-        System.out.println(target);
-
-        System.out.println(request);
+        String branch = "";
+        String event = request.getHeader("X-GitHub-Event");
+        if (event.compareTo("push") == 0) {
+            branch = getBranch(request);
+        }
 
         // here you do all the continuous integration tasks
         // for example
         // 1st clone your repository
         // 2nd compile the code
 
-        response.getWriter().println("CI job done");
+        //response.getWriter().println("CI job done");
     }
 
     // used to start the CI server in command line
@@ -43,5 +49,20 @@ public class ContinuousIntegrationServer extends AbstractHandler
         server.setHandler(new ContinuousIntegrationServer());
         server.start();
         server.join();
+    }
+
+    public String getBranch(HttpServletRequest request) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        InputStream inputStream = request.getInputStream();
+        BufferedReader bufReader = new BufferedReader(new InputStreamReader(inputStream));
+        String s = bufReader.readLine();
+        int index = 41;
+        while (s.charAt(index) != '%') {
+            sb.append(s.charAt(index));
+            index++;
+        }
+        System.out.println(sb.toString());
+
+        return sb.toString();
     }
 }
