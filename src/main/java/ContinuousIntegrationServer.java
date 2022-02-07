@@ -6,7 +6,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Enumeration;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
@@ -29,10 +28,13 @@ public class ContinuousIntegrationServer extends AbstractHandler
         baseRequest.setHandled(true);
 
         String branch = "";
-        String event = request.getHeader("X-GitHub-Event");
-        if (event.compareTo("push") == 0) {
-            branch = getBranch(request);
+        if (request.getMethod() == "POST") {
+            String event = request.getHeader("X-GitHub-Event");
+            if (event.compareTo("push") == 0) {
+                branch = getBranch(request);
+            }
         }
+        
 
         // here you do all the continuous integration tasks
         // for example
