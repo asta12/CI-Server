@@ -58,12 +58,24 @@ public class ContinuousIntegrationServer extends AbstractHandler
         InputStream inputStream = request.getInputStream();
         BufferedReader bufReader = new BufferedReader(new InputStreamReader(inputStream));
         String s = bufReader.readLine();
-        int index = 41;
-        while (s.charAt(index) != '%') {
-            sb.append(s.charAt(index));
-            index++;
+        System.out.println(s);
+        StringBuilder path = new StringBuilder();
+        int index = 14;
+        while (true) {
+            while (s.charAt(index) != '%') {
+                path.append(s.charAt(index));
+                index++;
+            }
+            if (path.toString().compareTo("before") == 0) {
+                break;
+            } else {
+                sb.append(path.toString() + "/");
+                path.setLength(0);
+                while (s.charAt(index) == '%') {
+                    index = index + 3;
+                }
+            }
         }
-        System.out.println(sb.toString());
 
         return sb.toString();
     }
