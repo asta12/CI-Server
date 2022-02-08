@@ -25,6 +25,9 @@ import org.json.simple.parser.ParseException;
  */
 public class ContinuousIntegrationServer extends AbstractHandler
 {
+    /**
+     * Handler for the path "/". This is the main handler for the CI-Server.
+     */
     public void handle(String target,
                        Request baseRequest,
                        HttpServletRequest request,
@@ -44,40 +47,47 @@ public class ContinuousIntegrationServer extends AbstractHandler
             }
         }
         
+        cloneRepo(branch);
+        String compileOutput = processCall("gradle javaCompile");
+        System.out.println(compileOutput);
+        //processCall("./gradlew test");
+        processCall("rm -rf CI-Server");
+        
+    }
+
+    /**
+     * @param command String representing a commandline command
+     * Runs the command given by the argument
+     * @return Returns a String containing what the command outputted.
+     */
+    public String processCall(String command) throws IOException {
+        String line = "";
+        Process process = Runtime.getRuntime().exec(command);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder sb = new StringBuilder();
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
+        reader.close();
+        return sb.toString();
+    }
+
+    /**
+     * @param branch String representing the branch to be cloned.
+     * Clones the branch specified by the argument.
+     */
+    public void cloneRepo(String branch) {
         try {
             Git git = Git.cloneRepository()
             .setURI( "https://github.com/asta12/CI-Server.git" )
             .setBranchesToClone(Arrays.asList(branch))
             .setBranch(branch)
             .call();
-
-        System.out.println("repository cloned");
+            System.out.println("Repository cloned");
         } catch (Exception e) {
-            System.out.println("Couldn't clone repo");
+            System.out.println("Couldn't clone repository");
             e.printStackTrace();
         }
-
-        Process process = Runtime.getRuntime().exec("./gradlew test");
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line = "";
-        while ((line = reader.readLine()) != null) {
-            System.out.println(line);
-        }
-
-        Process process = Runtime.getRuntime().exec("rm -rf CI-Server/");
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line = "";
-        while ((line = reader.readLine()) != null) {
-            System.out.println(line);
-        }
-        
-
-        // here you do all the continuous integration tasks
-        // for example
-        // 1st clone your repository
-        // 2nd compile the code
-
-        //response.getWriter().println("CI job done");
     }
 
     // used to start the CI server in command line
@@ -89,6 +99,11 @@ public class ContinuousIntegrationServer extends AbstractHandler
         server.join();
     }
 
+    /**
+     * @param request A HTTP request with a body whose content is in json format.
+     * Creates a JSON Object out of the payload of the request.
+     * @return A JSONObject that is the payload of the request.
+     */
     public JSONObject getJSON(HttpServletRequest request) throws IOException {
         InputStream inputStream = request.getInputStream();
         BufferedReader bufReader = new BufferedReader(new InputStreamReader(inputStream));
@@ -99,6 +114,7 @@ public class ContinuousIntegrationServer extends AbstractHandler
         try {
             jsonObj = (JSONObject) parser.parse(s.toString());
         } catch (ParseException e) {
+            System.out.println("Couldn't parse JSON object");
             e.printStackTrace();
         }
 
