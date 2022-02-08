@@ -3,13 +3,21 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+
+import org.eclipse.jgit.api.Git;
+
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /**
  Skeleton of a ContinuousIntegrationServer which acts as webhook
@@ -27,12 +35,40 @@ public class ContinuousIntegrationServer extends AbstractHandler
         response.setStatus(HttpServletResponse.SC_OK);
         baseRequest.setHandled(true);
 
+        JSONObject json = new JSONObject();
         String branch = "";
         if (request.getMethod() == "POST") {
             String event = request.getHeader("X-GitHub-Event");
             if (event.compareTo("push") == 0) {
-                branch = getBranch(request);
+                branch = json.get("ref").toString();
             }
+        }
+        
+        try {
+            Git git = Git.cloneRepository()
+            .setURI( "https://github.com/asta12/CI-Server.git" )
+            .setBranchesToClone(Arrays.asList(branch))
+            .setBranch(branch)
+            .call();
+
+        System.out.println("repository cloned");
+        } catch (Exception e) {
+            System.out.println("Couldn't clone repo");
+            e.printStackTrace();
+        }
+
+        Process process = Runtime.getRuntime().exec("./gradlew test");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line = "";
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
+        }
+
+        Process process = Runtime.getRuntime().exec("rm -rf CI-Server/");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line = "";
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
         }
         
 
@@ -53,30 +89,19 @@ public class ContinuousIntegrationServer extends AbstractHandler
         server.join();
     }
 
-    public String getBranch(HttpServletRequest request) throws IOException {
-        StringBuilder sb = new StringBuilder();
+    public JSONObject getJSON(HttpServletRequest request) throws IOException {
         InputStream inputStream = request.getInputStream();
         BufferedReader bufReader = new BufferedReader(new InputStreamReader(inputStream));
         String s = bufReader.readLine();
-        System.out.println(s);
-        StringBuilder path = new StringBuilder();
-        int index = 14;
-        while (true) {
-            while (s.charAt(index) != '%') {
-                path.append(s.charAt(index));
-                index++;
-            }
-            if (path.toString().compareTo("before") == 0) {
-                break;
-            } else {
-                sb.append(path.toString() + "/");
-                path.setLength(0);
-                while (s.charAt(index) == '%') {
-                    index = index + 3;
-                }
-            }
+        JSONParser parser = new JSONParser();
+
+        JSONObject jsonObj = new JSONObject();
+        try {
+            jsonObj = (JSONObject) parser.parse(s.toString());
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
 
-        return sb.toString();
+        return jsonObj;
     }
 }
