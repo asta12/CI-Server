@@ -17,26 +17,31 @@ import java.io.BufferedReader;
 
 import java.util.Scanner;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+
 public class CIServerTest {
 
+
     /**
-        
+     * Tests that the correct branch is retreived from a request
+     * @throws IOException throws IOException
      */
     @Test
     public void branchTest() throws IOException {
         FileReader fileReader = new FileReader(new File("testFiles/mockRequest.txt"));
         BufferedReader reader = new BufferedReader(fileReader);
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
 
-        String line = line = reader.readLine();
+        String line = reader.readLine();
         while (line != null) {
-            stringBuilder.append(line);
+            sb.append(line);
             line = reader.readLine();
         }
         reader.close();
 
         HttpServletRequest mockRequest = mock(HttpServletRequest.class);
-        byte[] payload = stringBuilder.toString().getBytes();
+        byte[] payload = sb.toString().getBytes();
         ByteArrayInputStream stream = new ByteArrayInputStream(payload);
         when(mockRequest.getInputStream()).thenReturn(new DelegatingServletInputStream(stream));
 
@@ -44,6 +49,35 @@ public class CIServerTest {
         JSONObject json = CI.getJSON(mockRequest);
         assertEquals("refs/heads/testbranch123", json.get("ref").toString());
     }
+
+    /**
+     * Tests the processCall method to execute the commandline argument "echo"
+     * @throws IOException throws IOException
+     */
+    @Test
+    public void processCallTest() throws IOException {
+        ContinuousIntegrationServer CI = new ContinuousIntegrationServer();
+        String expected = "processCall works";
+        String actual = CI.processCall("echo " + expected);
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Tests so that the cloneRepo function successfully clones the repo
+     * @throws IOException throws IOException
+     */
+    @Test
+    public void cloneRepoTest() throws IOException {
+        ContinuousIntegrationServer CI = new ContinuousIntegrationServer();
+        CI.cloneRepo("main");
+        CI.processCall("rm -rf CI-Server");
+        String repo = CI.processCall("ls -la ./CI-Server");
+        assertTrue(repo.contains("README"));
+    }
+
+
+
+
 
 }
 

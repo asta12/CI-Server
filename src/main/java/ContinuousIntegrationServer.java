@@ -4,20 +4,19 @@ import javax.servlet.ServletException;
 
 import java.io.BufferedReader;
 import java.io.File;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
-import org.eclipse.jgit.api.Git;
-
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
 
 /**
  Skeleton of a ContinuousIntegrationServer which acts as webhook
@@ -38,27 +37,45 @@ public class ContinuousIntegrationServer extends AbstractHandler
         response.setStatus(HttpServletResponse.SC_OK);
         baseRequest.setHandled(true);
 
-        JSONObject json = new JSONObject();
+        JSONObject json = getJSON(request);
         String branch = "";
         if (request.getMethod() == "POST") {
             String event = request.getHeader("X-GitHub-Event");
             if (event.compareTo("push") == 0) {
+                System.out.println("branch below:");
                 branch = json.get("ref").toString();
+                System.out.println(branch);
             }
         }
-        
+
         cloneRepo(branch);
-        String compileOutput = processCall("gradle javaCompile");
+        // how to call gradle and print output
+        String compileOutput = processCall("./CI-Server/gradlew compileJava");
         System.out.println(compileOutput);
-        //processCall("./gradlew test");
-        processCall("rm -rf CI-Server");
+        String testOutput = processCall("./CI-Server/gradlew test");
+        System.out.println(testOutput);
         
+    }
+
+    /**
+     * Clones the branch specified in the git repo 
+     * @param branch
+     * @throws IOException throws IOException
+     */
+    public void cloneRepo(String branch) throws IOException {
+        if (new File("CI-Server").exists()) {
+            processCall("rm -rf CI-Server");
+        }
+        String[] branchPath = branch.split("/");
+        String command = "git clone -b " + branchPath[branchPath.length - 1] + " https://github.com/joakimAbdinurIusuf/CI-Server.git";
+        processCall(command);
     }
 
     /**
      * @param command String representing a commandline command
      * Runs the command given by the argument
      * @return Returns a String containing what the command outputted.
+     * @throws IOException Throws IOException if reader fails.
      */
     public String processCall(String command) throws IOException {
         String line = "";
@@ -73,24 +90,10 @@ public class ContinuousIntegrationServer extends AbstractHandler
     }
 
     /**
-     * @param branch String representing the branch to be cloned.
-     * Clones the branch specified by the argument.
+     * Main function. Initializes the server on port 8080.
+     * @param args Takes no arguments
+     * @throws Exception throws Exception
      */
-    public void cloneRepo(String branch) {
-        try {
-            Git git = Git.cloneRepository()
-            .setURI( "https://github.com/asta12/CI-Server.git" )
-            .setBranchesToClone(Arrays.asList(branch))
-            .setBranch(branch)
-            .call();
-            System.out.println("Repository cloned");
-        } catch (Exception e) {
-            System.out.println("Couldn't clone repository");
-            e.printStackTrace();
-        }
-    }
-
-    // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
         Server server = new Server(8080);
@@ -103,6 +106,7 @@ public class ContinuousIntegrationServer extends AbstractHandler
      * @param request A HTTP request with a body whose content is in json format.
      * Creates a JSON Object out of the payload of the request.
      * @return A JSONObject that is the payload of the request.
+     * @throws IOException throws IOException if reader fails.
      */
     public JSONObject getJSON(HttpServletRequest request) throws IOException {
         InputStream inputStream = request.getInputStream();
