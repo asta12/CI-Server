@@ -62,22 +62,5 @@ public class CIServerTest {
         assertEquals(expected, actual);
     }
 
-    /**
-     * Tests so that the cloneRepo function successfully clones the repo
-     * @throws IOException throws IOException
-     */
-    @Test
-    public void cloneRepoTest() throws IOException {
-        ContinuousIntegrationServer CI = new ContinuousIntegrationServer();
-        CI.cloneRepo("main");
-        CI.processCall("rm -rf CI-Server");
-        String repo = CI.processCall("ls -la ./CI-Server");
-        assertTrue(repo.contains("README"));
-    }
-
-
-
-
-
 }
 
