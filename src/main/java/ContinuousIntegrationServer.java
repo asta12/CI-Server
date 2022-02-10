@@ -102,7 +102,7 @@ public class ContinuousIntegrationServer extends AbstractHandler {
         if (compileOutput.contains("BUILD SUCCESSFUL")) {
             return true;
         }
-        return false
+        return false;
     }
 
     /**
