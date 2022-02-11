@@ -47,7 +47,7 @@ public class CIServerTest {
 
         ContinuousIntegrationServer CI = new ContinuousIntegrationServer();
         JSONObject json = CI.getJSON(mockRequest);
-        assertEquals("refs/heads/testbranch123 dhsjkhfkshfvjk", json.get("ref").toString());
+        assertEquals("refs/heads/testbranch123", json.get("ref").toString());
     }
 
     /**
